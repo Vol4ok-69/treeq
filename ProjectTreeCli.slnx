@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="ProjectTreeCli.Tests/ProjectTreeCli.Tests.csproj" />
+  <Project Path="ProjectTreeCli/ProjectTreeCli.csproj" />
+</Solution>
