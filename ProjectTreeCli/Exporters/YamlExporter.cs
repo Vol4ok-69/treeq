@@ -2,11 +2,11 @@
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
-namespace ProjectTreeCli.Services.Exporters;
+namespace ProjectTreeCli.Exporters;
 
 public sealed class YamlExporter : IExporter
 {
-    public string Export(DirectoryNode root)
+    public string Export(DirectoryNode root, AppOptions options)
     {
         var serializer = new SerializerBuilder()
             .WithNamingConvention(

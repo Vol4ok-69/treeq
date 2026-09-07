@@ -1,11 +1,11 @@
 ﻿using ProjectTreeCli.Models;
 using System.Text.Json;
 
-namespace ProjectTreeCli.Services.Exporters;
+namespace ProjectTreeCli.Exporters;
 
 public sealed class JsonExporter : IExporter
 {
-    public string Export(DirectoryNode root)
+    public string Export(DirectoryNode root, AppOptions options)
     {
         return JsonSerializer.Serialize(
             root,

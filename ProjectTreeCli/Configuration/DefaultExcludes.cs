@@ -19,6 +19,7 @@ public static class DefaultExcludes
         ".next",
         ".nuxt",
         "target",
-        "out"
+        "out",
+        ".gradle-user",
     ];
 }

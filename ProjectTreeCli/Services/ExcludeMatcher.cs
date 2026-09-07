@@ -1,23 +1,31 @@
-﻿using ProjectTreeCli.Configuration;
+﻿using DotNet.Globbing;
+using ProjectTreeCli.Configuration;
 
 namespace ProjectTreeCli.Services;
 
 public sealed class ExcludeMatcher
 {
-    public bool IsExcluded(
-        string path,
-        IEnumerable<string> customExcludes)
+    public bool IsExcluded(string path, IEnumerable<string> patterns)
     {
-        var name = Path.GetFileName(path);
+        var normalizedPath = path.Replace('\\', '/');
 
-        if (DefaultExcludes.Items.Contains(name))
+        var fileName = Path.GetFileName(path);
+
+        if (DefaultExcludes.Items.Contains(fileName))
         {
             return true;
         }
 
-        foreach (var exclude in customExcludes)
+        foreach (var pattern in patterns)
         {
-            if (Matches(name, exclude))
+            if (string.IsNullOrWhiteSpace(pattern))
+            {
+                continue;
+            }
+
+            var glob = Glob.Parse(NormalizePattern(pattern));
+
+            if (glob.IsMatch(normalizedPath) || glob.IsMatch(fileName))
             {
                 return true;
             }
@@ -26,27 +34,8 @@ public sealed class ExcludeMatcher
         return false;
     }
 
-    private bool Matches(
-        string name,
-        string pattern)
+    private string NormalizePattern(string pattern)
     {
-        pattern = pattern.Trim();
-
-        if (pattern.StartsWith("*."))
-        {
-            return Path.GetExtension(name)
-                .Equals(
-                    pattern[1..],
-                    StringComparison.OrdinalIgnoreCase);
-        }
-
-        if (pattern.EndsWith('/'))
-        {
-            pattern = pattern.TrimEnd('/');
-        }
-
-        return name.Equals(
-            pattern,
-            StringComparison.OrdinalIgnoreCase);
+        return pattern.Replace('\\', '/').Trim();
     }
 }

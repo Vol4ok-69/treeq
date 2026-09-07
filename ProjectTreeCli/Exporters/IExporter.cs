@@ -1,8 +1,8 @@
 ﻿using ProjectTreeCli.Models;
 
-namespace ProjectTreeCli.Services.Exporters;
+namespace ProjectTreeCli.Exporters;
 
 public interface IExporter
 {
-    string Export(DirectoryNode root);
+    string Export(DirectoryNode root, AppOptions options);
 }

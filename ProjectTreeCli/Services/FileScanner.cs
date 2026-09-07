@@ -8,16 +8,10 @@ public sealed class FileScanner(ExcludeMatcher excludeMatcher)
 
     public DirectoryNode Scan(AppOptions options)
     {
-        return ScanDirectory(
-            options.RootPath,
-            options,
-            0);
+        return ScanDirectory(options.RootPath, options, 0);
     }
 
-    private DirectoryNode ScanDirectory(
-        string path,
-        AppOptions options,
-        int depth)
+    private DirectoryNode ScanDirectory(string path, AppOptions options, int depth)
     {
         var directoryNode = new DirectoryNode
         {
@@ -32,17 +26,20 @@ public sealed class FileScanner(ExcludeMatcher excludeMatcher)
 
         foreach (var directory in Directory.EnumerateDirectories(path))
         {
-            if (_excludeMatcher.IsExcluded(directory, options.Excludes))
+            var relativeDirectory = Path.GetRelativePath(options.RootPath, directory);
+
+            if (_excludeMatcher.IsExcluded(relativeDirectory, options.Excludes))
             {
                 continue;
             }
-
-            var childDirectory = ScanDirectory(
-                directory,
-                options,
-                depth + 1);
+            if (options.IgnoreHidden && IsHidden(directory))
+            {
+                continue;
+            }
+            var childDirectory = ScanDirectory(directory, options, depth + 1);
 
             directoryNode.Directories.Add(childDirectory);
+            directoryNode.Size += childDirectory.Size;
         }
 
         foreach (var file in Directory.EnumerateFiles(path))
@@ -52,15 +49,26 @@ public sealed class FileScanner(ExcludeMatcher excludeMatcher)
                 continue;
             }
 
+            if (options.IgnoreHidden && IsHidden(file))
+            {
+                continue;
+            }
+
             var extension = Path.GetExtension(file);
 
-            if (options.OnlyExtensions.Count > 0 &&
-                !options.OnlyExtensions.Contains(extension))
+            if (options.OnlyExtensions.Count > 0 && !options.OnlyExtensions.Contains(extension))
             {
                 continue;
             }
 
             var fileInfo = new FileInfo(file);
+
+            var maxBytes = options.MaxFileSizeKb * 1024;
+
+            if (fileInfo.Length > maxBytes)
+            {
+                continue;
+            }
 
             directoryNode.Files.Add(new FileNode
             {
@@ -68,8 +76,31 @@ public sealed class FileScanner(ExcludeMatcher excludeMatcher)
                 FullPath = file,
                 Size = fileInfo.Length
             });
+            directoryNode.Size += fileInfo.Length;
         }
 
         return directoryNode;
+    }
+
+    private bool IsHidden(string path)
+    {
+        var name = Path.GetFileName(path);
+
+        if (name.StartsWith('.'))
+        {
+            return true;
+        }
+
+        try
+        {
+            var attributes = File.GetAttributes(path);
+
+            return attributes.HasFlag(
+                FileAttributes.Hidden);
+        }
+        catch
+        {
+            return false;
+        }
     }
 }

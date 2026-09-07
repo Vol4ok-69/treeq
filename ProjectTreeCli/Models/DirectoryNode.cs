@@ -6,6 +6,8 @@ public sealed class DirectoryNode
 
     public string FullPath { get; set; } = string.Empty;
 
+    public long Size { get; set; }
+
     public List<DirectoryNode> Directories { get; set; } = [];
 
     public List<FileNode> Files { get; set; } = [];
