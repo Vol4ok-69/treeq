@@ -1,4 +1,7 @@
 .vs/
 obj/
 bin/
+!ProjectTreeCli/bin/Release/net9.0/win-x64
 ProjectTreeCli/bin/Release/net9.0/win-x64/treeq.zip
+ProjectTreeCli/bin/Release/net9.0/win-x64/treeq.cmd
+ProjectTreeCli/bin/Release/net9.0/win-x64/treeq_installer.ps1
