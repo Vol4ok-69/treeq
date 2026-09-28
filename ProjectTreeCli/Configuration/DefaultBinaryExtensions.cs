@@ -1,4 +1,6 @@
-﻿namespace ProjectTreeCli.Configuration;
+﻿using System.ComponentModel;
+
+namespace ProjectTreeCli.Configuration;
 
 public static class DefaultBinaryExtensions
 {
@@ -20,6 +22,6 @@ public static class DefaultBinaryExtensions
         ".rar",
         ".7z",
         ".apk",
-        ".jar"
+        ".jar",
     ];
 }

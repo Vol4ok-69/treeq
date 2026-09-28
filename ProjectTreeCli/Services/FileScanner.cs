@@ -70,6 +70,8 @@ public sealed class FileScanner(ExcludeMatcher excludeMatcher)
                 continue;
             }
 
+
+
             directoryNode.Files.Add(new FileNode
             {
                 Name = Path.GetFileName(file),

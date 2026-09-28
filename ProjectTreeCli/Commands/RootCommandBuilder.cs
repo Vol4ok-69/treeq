@@ -59,6 +59,16 @@ public static class RootCommandBuilder
             Description = "Show project summary"
         };
 
+        var referencesOption = new Option<bool>("--references", "-r")
+        {
+            Description = "Show project-to-project references"
+        };
+
+        var packagesOption = new Option<bool>("--packages", "-p")
+        {
+            Description = "Show NuGet packages"
+        };
+
         var clipboardOption = new Option<bool>("--clipboard")
         {
             Description = "Copy output to clipboard"
@@ -118,6 +128,8 @@ public static class RootCommandBuilder
             // dotNetOption,
             // androidOption,
             // diffOption,
+            referencesOption,
+            packagesOption
         };
 
         rootCommand.SetAction(async parseResult =>
@@ -141,9 +153,12 @@ public static class RootCommandBuilder
                 // DotNetMode = parseResult.GetValue(dotNetOption),
                 // AndroidMode = parseResult.GetValue(androidOption),
                 // DiffPath = parseResult.GetValue(diffOption),
+                ShowReferences = parseResult.GetValue(referencesOption),
+                ShowPackages = parseResult.GetValue(packagesOption)
             };
 
-            if (options.ShowContent && options.Format == "tree")
+            if ((options.ShowContent || options.ShowReferences || options.ShowPackages)
+                && options.Format == "tree")
             {
                 options.Format = "markdown";
             }

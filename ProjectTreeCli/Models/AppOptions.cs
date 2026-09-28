@@ -37,4 +37,7 @@ public sealed class AppOptions
     // public bool AndroidMode { get; set; }
 
     // public string? DiffPath { get; set; }
+    public bool ShowReferences { get; set; }
+
+    public bool ShowPackages { get; set; }
 }

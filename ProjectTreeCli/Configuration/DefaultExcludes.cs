@@ -21,5 +21,13 @@ public static class DefaultExcludes
         "target",
         "out",
         ".gradle-user",
+        ".ps1",
+        ".md",
+        "docs",
+        ".docx",
+        ".drawio",
+
+        "LICENSE",
+        ".license"
     ];
 }

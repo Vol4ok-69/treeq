@@ -11,6 +11,7 @@ public sealed class MarkdownExporter : IExporter
     {
         var builder = new StringBuilder();
 
+        // 1. Project Structure
         builder.AppendLine("# Project Structure");
         builder.AppendLine();
 
@@ -22,10 +23,28 @@ public sealed class MarkdownExporter : IExporter
 
         builder.AppendLine("```");
 
-        builder.AppendLine();
+        // 2. Project References
+        if (options.ShowReferences)
+        {
+            var referenceService = new ProjectReferenceService();
+            var references = referenceService.GetReferences(root.FullPath);
 
+            RenderReferences(references, builder);
+        }
+
+        // 3. NuGet Packages
+        if (options.ShowPackages)
+        {
+            var packageService = new NuGetPackageService();
+            var packages = packageService.GetPackages(root.FullPath);
+
+            RenderPackages(packages, builder);
+        }
+
+        // 4. File Contents
         if (options.ShowContent)
         {
+            builder.AppendLine();
             builder.AppendLine("# File Contents");
 
             var binaryDetector = new BinaryDetector();
@@ -141,6 +160,65 @@ public sealed class MarkdownExporter : IExporter
         }
     }
 
+    private void RenderReferences(
+    List<ProjectReferenceInfo> references,
+    StringBuilder builder)
+    {
+        builder.AppendLine();
+        builder.AppendLine("# Project References");
+        builder.AppendLine();
+
+        if (references.Count == 0)
+        {
+            builder.AppendLine("No project-to-project references found.");
+            return;
+        }
+
+        foreach (var project in references)
+        {
+            builder.AppendLine($"## {project.Project}");
+            builder.AppendLine();
+
+            foreach (var reference in project.References)
+            {
+                builder.AppendLine($"- {reference}");
+            }
+
+            builder.AppendLine();
+        }
+    }
+
+    private void RenderPackages(
+        List<ProjectPackageInfo> projects,
+        StringBuilder builder)
+    {
+        builder.AppendLine();
+        builder.AppendLine("# NuGet Packages");
+        builder.AppendLine();
+
+        if (projects.Count == 0)
+        {
+            builder.AppendLine("No NuGet packages found.");
+            return;
+        }
+
+        foreach (var project in projects)
+        {
+            builder.AppendLine($"## {project.Project}");
+            builder.AppendLine();
+
+            builder.AppendLine("| Package | Requested | Resolved |");
+            builder.AppendLine("| --- | --- | --- |");
+
+            foreach (var package in project.Packages)
+            {
+                builder.AppendLine(
+                    $"| {package.Name} | {package.Requested} | {package.Resolved} |");
+            }
+
+            builder.AppendLine();
+        }
+    }
     private string GetLanguage(string extension)
     {
         return extension.ToLower() switch
