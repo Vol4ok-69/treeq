@@ -1,6 +1,7 @@
 ﻿using ProjectTreeCli.Models;
 using System.Diagnostics;
 using System.Text.Json;
+using System.Xml.Linq;
 
 namespace ProjectTreeCli.Services;
 
@@ -8,21 +9,170 @@ public sealed class NuGetPackageService
 {
     public List<ProjectPackageInfo> GetPackages(string rootPath)
     {
+        var result = new List<ProjectPackageInfo>();
+
         var target = FindDotNetTarget(rootPath);
 
-        if (target is null)
+        if (target is not null)
         {
-            return [];
+            var output = RunDotNet(target);
+
+            if (!string.IsNullOrWhiteSpace(output))
+            {
+                try
+                {
+                    result = ParsePackages(output);
+                }
+                catch (JsonException)
+                {
+                    // Project may use packages.config.
+                }
+            }
         }
 
-        var output = RunDotNet(target);
 
-        if (string.IsNullOrWhiteSpace(output))
+        var legacyPackages = GetLegacyPackages(rootPath);
+
+        MergePackages(result, legacyPackages);
+
+        return result
+            .OrderBy(project => project.Project)
+            .ToList();
+    }
+
+    private List<ProjectPackageInfo> GetLegacyPackages(string rootPath)
+    {
+        var result = new List<ProjectPackageInfo>();
+
+        var projectFiles = Directory
+            .EnumerateFiles(
+                rootPath,
+                "*.*proj",
+                SearchOption.AllDirectories)
+            .Where(IsSupportedProject)
+            .ToList();
+
+        foreach (var projectFile in projectFiles)
         {
-            return [];
+            var projectDirectory = Path.GetDirectoryName(projectFile);
+
+            if (projectDirectory is null)
+            {
+                continue;
+            }
+
+            var packagesConfigPath = Path.Combine(
+                projectDirectory,
+                "packages.config");
+
+            if (!File.Exists(packagesConfigPath))
+            {
+                continue;
+            }
+
+            var packages = ParsePackagesConfig(packagesConfigPath);
+
+            if (packages.Count == 0)
+            {
+                continue;
+            }
+
+            result.Add(new ProjectPackageInfo
+            {
+                Project = Path.GetFileNameWithoutExtension(projectFile),
+                Packages = packages
+            });
         }
 
-        return ParsePackages(output);
+        return result;
+    }
+
+    private List<PackageInfo> ParsePackagesConfig(string path)
+    {
+        var document = XDocument.Load(path);
+
+        return document
+            .Descendants()
+            .Where(element =>
+                element.Name.LocalName == "package")
+            .Select(element =>
+            {
+                var name = element.Attribute("id")?.Value;
+                var version = element.Attribute("version")?.Value;
+
+                if (string.IsNullOrWhiteSpace(name))
+                {
+                    return null;
+                }
+
+                return new PackageInfo
+                {
+                    Name = name,
+                    Requested = version ?? string.Empty,
+                    Resolved = version ?? string.Empty
+                };
+            })
+            .Where(package => package is not null)
+            .Select(package => package!)
+            .GroupBy(
+                package => package.Name,
+                StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderBy(package => package.Name)
+            .ToList();
+    }
+
+    private void MergePackages(
+    List<ProjectPackageInfo> target,
+    List<ProjectPackageInfo> source)
+    {
+        foreach (var sourceProject in source)
+        {
+            var targetProject = target.FirstOrDefault(
+                project =>
+                    project.Project.Equals(
+                        sourceProject.Project,
+                        StringComparison.OrdinalIgnoreCase));
+
+            if (targetProject is null)
+            {
+                target.Add(sourceProject);
+                continue;
+            }
+
+            foreach (var sourcePackage in sourceProject.Packages)
+            {
+                var exists = targetProject.Packages.Any(
+                    package =>
+                        package.Name.Equals(
+                            sourcePackage.Name,
+                            StringComparison.OrdinalIgnoreCase));
+
+                if (!exists)
+                {
+                    targetProject.Packages.Add(sourcePackage);
+                }
+            }
+
+            targetProject.Packages = targetProject.Packages
+                .OrderBy(package => package.Name)
+                .ToList();
+        }
+    }
+
+    private bool IsSupportedProject(string path)
+    {
+        var extension = Path.GetExtension(path);
+
+        return extension.Equals(
+                   ".csproj",
+                   StringComparison.OrdinalIgnoreCase)
+               || extension.Equals(
+                   ".fsproj",
+                   StringComparison.OrdinalIgnoreCase)
+               || extension.Equals(
+                   ".vbproj",
+                   StringComparison.OrdinalIgnoreCase);
     }
 
     private string? FindDotNetTarget(string rootPath)
